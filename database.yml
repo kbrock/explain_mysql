@@ -1,0 +1,6 @@
+development:
+  adapter: mysql
+  database: people
+  username: root
+  password:
+  timeout: 5000
