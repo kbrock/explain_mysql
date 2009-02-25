@@ -23,18 +23,20 @@ class Database
       :database => curr_db["database"],
       :username => curr_db["username"],
       :password => curr_db["password"])
+      
+    self
   end
 
   def create
     ActiveRecord::Schema.define do
       create_table :people do |t|
-        t.integer :parent_id, :nil => false, :default=> 0
-        t.string :name,      :string, :nil => false
-        t.column :manager_id, :integer, :nil => false, :default => 0
+        t.integer :parent_id, :null => false, :default=> 0
+        t.string :name,      :string, :null => false
+        t.column :manager_id, :integer, :null => false, :default => 0
       end
 
       create_table :residences do |t|
-        t.integer :person_id, :address_id, :nil => false
+        t.integer :person_id,:address_id, :null => false
       end
 
       create_table :addresses do |t|
@@ -42,13 +44,48 @@ class Database
         t.string :city, :state, :zip
       end
     end
+    
+    self
   end
   
-  #not working
+  def createSimpleIndexes
+    ActiveRecord::Schema.define do
+      add_index :residences, :person_id
+      add_index :residences, :address_id
+    end  
+    self  
+  end
+  
+  def createComplexIndexes
+    ActiveRecord::Schema.define do
+      add_index :residences, [:person_id,:address_id], :name=>'index_residences_on_pa'
+      add_index :residences, [:address_id,:person_id], :name=>'index_residences_on_ap'
+    end
+    self    
+  end
+  
+  def dropIndexes
+    ActiveRecord::Schema.define do
+    begin
+      remove_index :residences, :person_id
+      remove_index :residences, :address_id
+    rescue
+    end
+    begin
+      #create unique index residences_pa on residences (person_id,address_id);
+      remove_index :residences, :name => 'index_residences_on_pa'
+      remove_index :residences, :name => 'index_residences_on_ap'
+    rescue
+    end
+    end
+  end
+  
   def truncate
-    ActiveRecord::Base.execute('use people ; truncate table people')
-    ActiveRecord::Base.execute('use people ; truncate table addresses')
-    ActiveRecord::Base.execute('use people ; truncate table residences')
+    ActiveRecord::Base.connection.execute('truncate table people')
+    ActiveRecord::Base.connection.execute('truncate table addresses')
+    ActiveRecord::Base.connection.execute('truncate table residences')
+    
+    self
   end
   
   def destroy
@@ -57,6 +94,7 @@ class Database
       drop_table :addresses
       drop_table :people
     end
+    self
   end
 end
 
@@ -68,8 +106,16 @@ if __FILE__ == $0
   case "#{$*}"
   when "destroy", "drop":
     d.destroy
-  when "truncate"
+  when "truncate":
     d.truncate
+  when "reset":
+    d.destroy.create
+  when "simple":
+    d.createSimpleIndexes
+  when "complex":
+    d.createComplexIndexes
+  when "dropindex", "drop_index", "dropindexes", "drop_indexes":
+    d.dropIndexes
   else
     d.create
   end

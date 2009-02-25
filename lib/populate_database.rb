@@ -9,13 +9,14 @@ require 'lib/person'
 require 'lib/residence'
 require 'lib/address'
 
+require 'benchmark'
 #modified 
 #added 'if logger' to the end of:
 #/opt/local/lib/ruby/gems/1.8/gems/activerecord-2.2.2/lib/active_record/base.rb#2793
 
 ##populate the database with data
 class PopulateDatabase
-  COMMIT_SIZE=1000
+  COMMIT_SIZE=200
   
   attr_accessor :people,:residences,:addresses
   
@@ -28,19 +29,25 @@ class PopulateDatabase
     @residences=[]
     @people=[]
   end
-  def populate(count=10000)
-    puts ":"
+
+  def populate(count,commit)
+    groups=(count/commit).ceil
     #arrays to temporarily hold this data
 
-    count.times do
-      create_person
-      if @people.size % COMMIT_SIZE == 0||force
-        checkpoint
+    Benchmark.bm do |b|
+#      b.report "load" do
+      groups.times do
+        b.report "create" do
+          commit.times do
+            create_person
+          end
+        end
+        b.report "store" do
+          store
+        end
       end
+#      end
     end
-
-    checkpoint
-    puts ":"
   end
   
   def create_person
@@ -58,7 +65,6 @@ class PopulateDatabase
   end
 
   def store()
-    puts "."
     store_people(@people)
     store_addresses(@addresses)
     store_residences(@residences)
@@ -87,14 +93,22 @@ class PopulateDatabase
   end
   
   RESIDENCE_COLUMNS=[:id,:person_id, :address_id]
-  def store_residence(residences)
+  def store_residences(residences)
     Residence.import RESIDENCE_COLUMNS, residences
   end
 end
 
 if __FILE__ == $0
-  puts "loading database..."
-  Database.new.connect
-  PopulateDatabase.new.populate
+  count=begin $*[0].to_i rescue nil end
+  count=2000 if (count.nil? || count == 0)
+
+  commit=begin $*[0].to_i rescue nil end
+  commit=500 if commit.nil?||commit==0
+  commit=count if commit>count
+
+  puts "truncating database"
+  Database.new.connect.truncate
+  puts "loading database with #{count} records in increments of #{commit}"
+  PopulateDatabase.new.populate(count,commit)
   puts "done loading database..."
 end

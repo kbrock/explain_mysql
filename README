@@ -1,0 +1,20 @@
+I am using query explain to show what happens when extra indexes are created
+to cover queries
+
+http://dev.mysql.com/doc/refman/5.0/en/query-speed.html
+
+http://dev.mysql.com/doc/refman/5.0/en/select-speed.html
+
+mysql5 -u root people
+
+describe residences;
+show index from residences;
+
+join through this table needs to hit index and data table
+
+check statistics / query distribution
+http://dev.mysql.com/doc/refman/5.0/en/select-speed.html ( myisamchk )
+
+
+explain extended select p.name,a.city,a.state from people p left join residences on p.id = person_id left join addresses a on address_id = a.id where p.id=55;
+
