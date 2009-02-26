@@ -50,8 +50,8 @@ class Database
   
   def createSimpleIndexes
     ActiveRecord::Schema.define do
-      add_index :residences, :person_id
-      add_index :residences, :address_id
+      add_index :residences, :person_id, :name=>'index_residences_on_p'
+      add_index :residences, :address_id, :name=>'index_residences_on_a'
     end  
     self  
   end
@@ -64,17 +64,38 @@ class Database
     self    
   end
   
+  def createNameIndex
+    ActiveRecord::Schema.define do
+      add_index :people, [:name], :name=>'index_people_on_n'
+    end
+    self    
+  end
+  def createNameComplexIndex
+    ActiveRecord::Schema.define do
+      add_index :people, [:name,:id], :name=>'index_people_on_n2'
+    end
+    self    
+  end
+  
   def dropIndexes
     ActiveRecord::Schema.define do
     begin
-      remove_index :residences, :person_id
-      remove_index :residences, :address_id
+      remove_index :residences, :name => 'index_residences_on_p'
+      remove_index :residences, :name => 'index_residences_on_a'
     rescue
     end
     begin
       #create unique index residences_pa on residences (person_id,address_id);
       remove_index :residences, :name => 'index_residences_on_pa'
       remove_index :residences, :name => 'index_residences_on_ap'
+    rescue
+    end
+    begin
+      remove_index :people, :name=>'index_people_on_n'
+    rescue
+    end
+    begin
+      remove_index :people, :name=>'index_people_on_n2'
     rescue
     end
     end
@@ -114,9 +135,13 @@ if __FILE__ == $0
     d.createSimpleIndexes
   when "complex":
     d.createComplexIndexes
+  when "name":
+    d.createNameIndex
+  when "name_complex"
+    d.createNameComplexIndex
   when "dropindex", "drop_index", "dropindexes", "drop_indexes":
     d.dropIndexes
-  else
+  when "create"
     d.create
   end
 end
